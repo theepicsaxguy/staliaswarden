@@ -1,4 +1,12 @@
-# staliaswarden
+# Staliaswarden
+
+## Problem and Solution
+
+I created this application in order to combat the spamming I got on my main email. There are many services like SimpleLogin, Anonaddy, etc. that let you create aliases for your main email.
+
+I wanted to have one that works automatically through my password manager, Vault/Bitwarden that notifies my Stalwart email server to create the alias.
+
+So whenever I want to register to a new website, I just create a new email alias through Bbitwarden and it just works.
 
 ## Setup
 
