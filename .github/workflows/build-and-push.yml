@@ -37,7 +37,12 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
+          # For organization packages, use the organization name as username
+          # If you get "permission_denied: The requested installation does not exist",
+          # create a Personal Access Token (PAT) with write:packages permission
+          # and add it as a repository secret named GHCR_TOKEN, then change
+          # the password line below to: password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ env.GHCR_ORG }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
