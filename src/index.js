@@ -58,14 +58,14 @@ async function createAlias(domain, stalwartToken) {
     throw new Error('Domain is required');
   }
   const alias = generateAlias(domain);
-  if (!alias) return null;
-  try {
-    await addAliasToStalwart(alias, stalwartToken);
-  } catch (err) {
-    log('ERROR', `Error adding alias to Stalwart: ${err.message}`);
-    // Continue anyway - we still return the alias even if Stalwart call fails
-    // This allows the user to see the alias was generated
+  if (!alias) {
+    throw new Error('Failed to generate alias');
   }
+  
+  // Must successfully add to Stalwart before returning
+  // If this fails, we don't return the alias since it won't actually work
+  await addAliasToStalwart(alias, stalwartToken);
+  
   return alias;
 }
 
