@@ -2,24 +2,75 @@ import express from 'express';
 import config from './config.js';
 import { generateAlias } from './alias.js';
 import { addAliasToStalwart } from './stalwart.js';
+import { log, logFile } from './logger.js';
 
 const app = express();
 app.use(express.json());
 
+// Helper function to redact sensitive information
+function redactSecrets(obj) {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  const redacted = { ...obj };
+  if (redacted.authorization) {
+    redacted.authorization = '[REDACTED]';
+  }
+  if (redacted.Authorization) {
+    redacted.Authorization = '[REDACTED]';
+  }
+  return redacted;
+}
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const requestInfo = {
+    method: req.method,
+    path: req.path,
+    headers: redactSecrets(req.headers),
+    body: req.body
+  };
+  log('REQUEST', `${req.method} ${req.path}`, requestInfo);
+  next();
+});
+
+// Response logging middleware
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  let responseBody = null;
+  
+  res.json = function(data) {
+    responseBody = data;
+    return originalJson.call(this, data);
+  };
+  
+  res.on('finish', () => {
+    const responseInfo = {
+      status: res.statusCode,
+      body: responseBody
+    };
+    log('RESPONSE', `${req.method} ${req.path} - Status: ${res.statusCode}`, responseInfo);
+  });
+  
+  next();
+});
+
 async function createAlias(domain, stalwartToken) {
+  if (!domain) {
+    throw new Error('Domain is required');
+  }
   const alias = generateAlias(domain);
   if (!alias) return null;
   try {
     await addAliasToStalwart(alias, stalwartToken);
   } catch (err) {
-    console.error(`Error adding alias to Stalwart:`, err.message);
+    log('ERROR', `Error adding alias to Stalwart: ${err.message}`);
     // Continue anyway - we still return the alias even if Stalwart call fails
     // This allows the user to see the alias was generated
   }
   return alias;
 }
 
-app.post('/api/aliases', async (req, res) => {
+// Handler function for creating aliases (used by both routes)
+async function handleCreateAlias(req, res) {
   // Extract Stalwart API token from Authorization header
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
@@ -31,7 +82,17 @@ app.post('/api/aliases', async (req, res) => {
   const stalwartToken = authHeader;
 
   const { domain } = req.body || {};
-  const alias = await createAlias(domain, stalwartToken);
+  if (!domain) {
+    return res.status(400).json({ error: 'Domain is required' });
+  }
+
+  let alias;
+  try {
+    alias = await createAlias(domain, stalwartToken);
+  } catch (err) {
+    log('ERROR', `Failed to create alias: ${err.message}`);
+    return res.status(500).json({ error: err.message || "Failed to create alias" });
+  }
 
   if (!alias) {
     return res.status(500).json({ error: "Failed to create alias" });
@@ -50,8 +111,17 @@ app.post('/api/aliases', async (req, res) => {
       enabled: true
     }
   });
-});
+}
+
+// Support multiple routes for compatibility
+// Standard route
+app.post('/api/aliases', handleCreateAlias);
+// Addy.io compatible route (what Bitwarden expects)
+app.post('/api/v1/aliases', handleCreateAlias);
+// Handle case where Bitwarden base URL is misconfigured
+app.post('/api/aliases/api/v1/aliases', handleCreateAlias);
 
 app.listen(config.port, () => {
-  console.log(`Alias service running on port ${config.port}`);
+  log('INFO', `Alias service running on port ${config.port}`);
+  log('INFO', `Logging to file: ${logFile}`);
 });

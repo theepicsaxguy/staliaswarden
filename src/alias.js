@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import config from './config.js';
 
-export function generateAlias(domain = 'random') {
+export function generateAlias(domain) {
+  if (!domain) {
+    throw new Error('Domain is required');
+  }
   const username = uuidv4().split('-')[0]; // short random ID
-  const selectedDomain =
-    domain === 'random' || !domain ? config.aliasDomain : domain;
-  return `${username}@${selectedDomain}`;
+  return `${username}@${domain}`;
 }

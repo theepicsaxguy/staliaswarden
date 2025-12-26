@@ -1,5 +1,6 @@
 import axios from 'axios';
 import config from './config.js';
+import { log } from './logger.js';
 
 async function getPrincipalFromToken(stalwartToken) {
   // Stalwart API keys should be used as Bearer tokens
@@ -21,7 +22,10 @@ async function getPrincipalFromToken(stalwartToken) {
   // The API key is tied to a specific principal, so we need to find it
   try {
     // Get principals - the API key will only return principals it has access to
-    const response = await api.get('/principal?limit=100');
+    const url = '/principal?limit=100';
+    log('STALWART REQUEST', `GET ${config.stalwartUrl}${url}`);
+    const response = await api.get(url);
+    log('STALWART RESPONSE', `GET ${url} - Status: ${response.status}`, response.data);
     if (response.data?.data?.items && response.data.data.items.length > 0) {
       // The API key should return the principal it belongs to
       // Typically the first result or the one matching the token
@@ -44,7 +48,7 @@ async function getPrincipalFromToken(stalwartToken) {
       }
     }
   } catch (err) {
-    console.error('Error fetching principal from Stalwart:', err.response?.data || err.message);
+    log('ERROR', `Error fetching principal from Stalwart: ${err.message}`, err.response?.data);
     throw new Error('Unable to determine principal from API key');
   }
 
@@ -73,18 +77,19 @@ export async function addAliasToStalwart(alias, stalwartToken) {
   });
 
   try {
-    const res = await api.patch(
-      `/principal/${principal}`,
-      [{
-        "action": "addItem",
-        "field": "emails",
-        "value": alias
-      }]
-    );
-    console.log(`Alias ${alias} added to Stalwart for principal ${principal}`);
+    const url = `/principal/${principal}`;
+    const payload = [{
+      "action": "addItem",
+      "field": "emails",
+      "value": alias
+    }];
+    log('STALWART REQUEST', `PATCH ${config.stalwartUrl}${url}`, payload);
+    const res = await api.patch(url, payload);
+    log('STALWART RESPONSE', `PATCH ${url} - Status: ${res.status}`, res.data);
+    log('INFO', `Alias ${alias} added to Stalwart for principal ${principal}`);
     return res;
   } catch (err) {
-    console.error(`Failed to add alias to Stalwart:`, err.response?.data || err.message);
+    log('ERROR', `Failed to add alias to Stalwart: ${err.message}`, err.response?.data);
     throw err;
   }
 }

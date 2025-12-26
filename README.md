@@ -13,10 +13,10 @@ So whenever I want to register to a new website, I just create a new email alias
 Clone this repo in your server.
 Create a `.env` like `.env.example`.
 
-- The `ALIAS_DOMAIN` should be your email domain (optional).
-- `FORWARD_TO` should keep the main email all aliases will forward to.
 - `STALWART_URL` is the domain (or IP) you host your stalwart instance (must include `/api` path).
 - `PORT` is the app's port.
+
+Note: The email domain is forwarded by Bitwarden in the request body, so no `ALIAS_DOMAIN` environment variable is needed.
 
 Run `docker compose up -d`.
 
