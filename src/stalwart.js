@@ -3,6 +3,11 @@ import config from './config.js';
 import { log } from './logger.js';
 
 async function getPrincipalFromToken(stalwartToken) {
+  // Check if STALWART_URL is configured
+  if (!config.stalwartUrl) {
+    throw new Error('STALWART_URL is not configured. Please set the STALWART_URL environment variable.');
+  }
+
   // Stalwart API keys should be used as Bearer tokens
   // The token format is api_<key> and should be sent as: Authorization: Bearer api_<key>
   const authHeader = stalwartToken.startsWith('Bearer ') 
@@ -58,6 +63,11 @@ async function getPrincipalFromToken(stalwartToken) {
 export async function addAliasToStalwart(alias, stalwartToken) {
   if (!stalwartToken) {
     throw new Error('Stalwart API token is required');
+  }
+
+  // Check if STALWART_URL is configured
+  if (!config.stalwartUrl) {
+    throw new Error('STALWART_URL is not configured. Please set the STALWART_URL environment variable.');
   }
 
   // Get the principal from the API key
